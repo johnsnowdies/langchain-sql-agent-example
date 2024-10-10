@@ -1,0 +1,85 @@
+services:
+
+  db:
+    image: postgres:11.6-alpine
+    shm_size: 512mb
+    ports:
+      - "15432:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_NAME}
+    networks:
+      agvend:
+
+  alembic-upgrade:
+    command: alembic upgrade head
+    image: 'eslider/agvend-backend:dev'
+    depends_on:
+      db:
+        condition: service_started
+    env_file:
+      - $ENV
+    volumes:
+      - .:/app
+    networks:
+      agvend:
+
+  alembic-generate-initial:
+    command: sh -c 'alembic revision --autogenerate -m "${MIGRATION_NAME:-Initial migration}"'
+    image: 'eslider/agvend-backend:dev'
+    volumes:
+      - .:/app
+    networks:
+      agvend:
+    depends_on:
+      db:
+        condition: service_started
+    env_file:
+      - $ENV
+
+  load-fixtures:
+    command: python -m fixtures.initial_data
+    image: 'eslider/agvend-backend:dev'
+    depends_on:
+      db:
+        condition: service_started
+    env_file:
+      - $ENV
+    volumes:
+      - .:/app
+    networks:
+      agvend:
+
+  compile-requirements:
+    command: make compile-requirements
+    image: 'eslider/agvend-backend:dev'
+    volumes:
+      - .:/app
+    networks:
+      agvend:
+
+  app:
+    build: .
+    command: gunicorn app.main:app -c gunicorn_config.py
+    image: 'eslider/agvend-backend:dev'
+    ports:
+      - "8080:8080"
+    env_file:
+      - $ENV
+    depends_on:
+      db:
+        condition: service_started
+    volumes:
+      - .:/app
+    networks:
+      agvend:
+
+
+
+volumes:
+  redis_data:
+
+networks:
+  agvend:
+    name: agvend
