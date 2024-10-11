@@ -59,9 +59,22 @@ services:
     networks:
       agvend:
 
+  test:
+    command: python -m app.test
+    image: 'eslider/agvend-backend:dev'
+    env_file:
+      - $ENV
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_started
+    networks:
+      agvend:
+
   app:
     build: .
-    command: gunicorn app.main:app -c gunicorn_config.py
+    command: gunicorn app.main:app -c gunicorn_config.py --reload
     image: 'eslider/agvend-backend:dev'
     ports:
       - "8080:8080"

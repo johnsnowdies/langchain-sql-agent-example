@@ -56,7 +56,7 @@ def load_fixtures():
 
         # Add orders
         start_date = date(2023, 1, 1)
-        end_date = date(2023, 12, 31)
+        end_date = date(2024, 10, 11)
 
         batch_size = 1000
         total_orders = 100000

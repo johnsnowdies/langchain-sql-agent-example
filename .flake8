@@ -8,8 +8,4 @@ extend-exclude =
     .*
 per-file-ignores =
     ./migrations/versions/*:E122,E128,W291,E501
-    ./service/main.py:E712
-    ./service/tasks/__init__.py:F401
-    ./service/tasks/send_promotion_push.py:E712
-    ./service/api/scheduler.py:E712
-    ./service/auth.py:E712
+
