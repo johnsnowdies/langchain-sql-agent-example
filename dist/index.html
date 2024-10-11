@@ -15,6 +15,12 @@
             margin-top: 20px;
             white-space: pre-wrap;
         }
+        .spinner-border {
+            display: none;
+            width: 1rem;
+            height: 1rem;
+            margin-right: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -34,7 +40,10 @@
             <input type="text" id="queryInput" class="form-control" placeholder="Enter your query here">
         </div>
         
-        <button id="submitBtn" class="btn btn-primary">Submit</button>
+        <button id="submitBtn" class="btn btn-primary">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Submit
+        </button>
         
         <div id="result" class="alert alert-info" style="display: none;"></div>
         <pre><code id="sqlResult" class="sql"></code></pre>
@@ -50,6 +59,7 @@
             const submitBtn = document.getElementById('submitBtn');
             const resultDiv = document.getElementById('result');
             const sqlResultDiv = document.getElementById('sqlResult');
+            const spinner = submitBtn.querySelector('.spinner-border');
 
             submitBtn.addEventListener('click', async function() {
                 const query = queryInput.value.trim();
@@ -61,6 +71,10 @@
                 const mode = modeSelect.value;
                 const endpoint = mode === 'chain' ? '/chain_query' : '/graph_query';
 
+                // Disable button and show spinner
+                submitBtn.disabled = true;
+                spinner.style.display = 'inline-block';
+
                 try {
                     const response = await fetch(endpoint, {
                         method: 'POST',
@@ -71,20 +85,24 @@
                     });
 
                     if (!response.ok) {
-                        throw new Error('Error with network');
+                        throw new Error('Network error');
                     }
 
                     const data = await response.json();
                     resultDiv.textContent = data.result;
                     resultDiv.style.display = 'block';
 
-                    // Удаляем экранирование и форматируем SQL
+                    // Remove escaping and format SQL
                     const formattedSql = data.raw_sql.replace(/\\"/g, '"').replace(/\\n/g, '\n');
                     sqlResultDiv.textContent = formattedSql;
                     hljs.highlightElement(sqlResultDiv);
                 } catch (error) {
                     console.error('Error:', error);
                     alert('An error occurred while sending the request');
+                } finally {
+                    // Enable button and hide spinner
+                    submitBtn.disabled = false;
+                    spinner.style.display = 'none';
                 }
             });
         });
