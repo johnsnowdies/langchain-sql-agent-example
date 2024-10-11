@@ -1,7 +1,10 @@
 import logging
 import os
+
 from fastapi import FastAPI
+
 from app.api import app as api_app
+
 
 # Setup logging
 logging_level = os.environ.get('LOGGING_LEVEL', 'INFO')

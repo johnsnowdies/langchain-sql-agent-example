@@ -1,4 +1,6 @@
 {
-    "ERROR_MESSAGE": "Sorry, I couldn't find the answer. Rephrase your question and try again, please",
-    "TOPIC_FILTER_MESSAGE": "I am an assistant for the sales system. I can only answer questions about users, products, and orders"
+    "CHAIN_ERROR_MESSAGE": "Sorry, I couldn't find the answer. Please rephrase your question and try again.",
+    "CHAIN_TOPIC_FILTER_MESSAGE": "I am an assistant for the sales system. I can only answer questions about users, products, and orders.",
+    "GRAPH_ERROR_MESSAGE": "Sorry, I couldn't find the answer. Please rephrase your question and try again.",
+    "GRAPH_TOPIC_FILTER_MESSAGE": "I am an assistant for the sales system. I can only answer questions about users, products, and orders."
 }

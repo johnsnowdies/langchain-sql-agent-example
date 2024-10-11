@@ -1,13 +1,16 @@
 import random
-import os
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import sessionmaker
 from datetime import date, timedelta
-from app.models import User, Product, Order
+
+from sqlalchemy import create_engine, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import sessionmaker
+
+from app.models import Order, Product, User
+from app.utils import get_db_connection_string
+
 
 # Database configuration
-db_url = f'postgresql://{os.getenv("DB_USER")}:{os.getenv("DB_PASS")}@{os.getenv("DB_HOST")}/{os.getenv("DB_NAME")}'
+db_url = get_db_connection_string()
 engine = create_engine(db_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
