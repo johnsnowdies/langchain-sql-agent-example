@@ -2,6 +2,12 @@
 
 This repository demonstrates the use of LangChain and LangGraph for SQL query generation, execution and validation.
 
+## Live Demo
+
+A live demo of this project is available at [https://langchain.eslider.me/](https://langchain.eslider.me/). 
+You can interact with the SQL agent and see the generated queries in action.
+
+
 ## Database Schema
 
 The project uses a relational database with the following tables:
