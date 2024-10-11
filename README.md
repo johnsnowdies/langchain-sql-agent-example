@@ -1,4 +1,4 @@
-# LongChain / LangGraph SQL Agent Demo
+# LangChain / LangGraph SQL Agent Demo
 
 This repository demonstrates the use of LangChain and LangGraph for SQL query generation, execution and validation.
 
