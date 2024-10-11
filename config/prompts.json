@@ -1,0 +1,3 @@
+{
+    "ANSWER_PROMPT": "Given the following user question, corresponding SQL query, and SQL result,\nanswer the user question. In Answer dont mention SQL Query and SQL Result, data source is \"the system\"\nQuestion: {question}\nSQL Query: {query}\nSQL Result: {result}\nAnswer: "
+}

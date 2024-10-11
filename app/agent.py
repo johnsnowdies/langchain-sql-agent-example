@@ -1,6 +1,9 @@
 import os
+from pathlib import Path
 import re
 import logging
+from typing import Optional
+
 from langchain_community.utilities import SQLDatabase
 from langchain_openai import ChatOpenAI
 from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
@@ -8,83 +11,102 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.prompts import PromptTemplate
 from langchain.chains import create_sql_query_chain
+from langchain_core.language_models import BaseLanguageModel
+from langchain_core.runnables import RunnableSerializable
 
-db_url = f'postgresql://{os.getenv("DB_USER")}:{os.getenv("DB_PASS")}@{os.getenv("DB_HOST")}/{os.getenv("DB_NAME")}'
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-ANSWER_PROMPT = """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
-Question: {question}
-SQL Query: {query}
-SQL Result: {result}
-Answer: """
+from app.utils import load_json_file
 
 
-def extract_sql_query(response):
-    """
-    Extract SQL query from the response string.
+class SQLAgent:
 
-    Args:
-    response (str): The response string containing the SQL query.
+    def __init__(
+        self,
+        db_url: str,
+        llm_model: str = "gpt-4o-mini",
+        openai_api_base: str = 'https://openrouter.ai/api/v1'
+    ) -> None:
+        """
+        Initializes the SQLAgent with the given database URL, LLM model, and OpenAI API base.
 
-    Returns:
-    str: The extracted SQL query, or None if no query is found.
-    """
-    # Log the extraction attempt
-    logger.info(f"Attempting to extract SQL query from response: {response}")
+        Args:
+        db_url (str): The database URL.
+        llm_model (str): The LLM model name.
+        openai_api_base (str): The OpenAI API base URL.
+        """
+        parent_dir_path: Path = Path(__file__).parent.parent
+        self.db: SQLDatabase = SQLDatabase.from_uri(db_url)
+        self.llm: BaseLanguageModel = self._create_llm(llm_model, openai_api_base)
+        self.prompts: dict[str, str] = load_json_file(parent_dir_path / 'config/prompts.json')
+        self.chain: RunnableSerializable = self._create_chain()
+        self.raw_sql = ''
 
-    # Try to extract SQL query with markdown and SQLQuery inside
-    sql_query = re.search(r'```sql\s*\n?SQLQuery:\s*(.*?)\n?```', response, re.DOTALL | re.IGNORECASE)
-    if sql_query:
-        logger.info(f"SQL query found with markdown and SQLQuery prefix: {sql_query.group(1).strip()}")
-        return sql_query.group(1).strip()
+    def _create_llm(self, model: str, api_base: str) -> ChatOpenAI:
+        """
+        Creates a ChatOpenAI instance with the specified model and API base.
 
-    # Try to extract SQL query with markdown
-    sql_query = re.search(r'```sql\n(.*?)\n```', response, re.DOTALL)
-    if sql_query:
-        logger.info(f"SQL query found with markdown: {sql_query.group(1).strip()}")
-        return sql_query.group(1).strip()
+        Args:
+        model (str): The model name.
+        api_base (str): The API base URL.
 
-    # If not found, try to extract SQL query without markdown
-    sql_query = re.search(r'SQLQuery:\s*(.*)', response, re.DOTALL)
-    if sql_query:
-        logger.info(f"SQL query found without markdown: {sql_query.group(1).strip()}")
-        return sql_query.group(1).strip()
+        Returns:
+        ChatOpenAI: The created ChatOpenAI instance.
+        """
+        openai_api_key: Optional[str] = os.environ.get("OPENAI_API_KEY")
+        if not openai_api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set")
+        return ChatOpenAI(
+            model=model,
+            openai_api_key=openai_api_key,
+            openai_api_base=api_base,
+            verbose=True
+        )
 
-    logger.info("No SQL query found in the response")
-    return None
+    def _create_chain(self) -> RunnableSerializable:
+        answer_prompt: PromptTemplate = PromptTemplate.from_template(self.prompts['ANSWER_PROMPT'])
+        execute_query: QuerySQLDataBaseTool = QuerySQLDataBaseTool(db=self.db)
+        write_query: RunnableSerializable = create_sql_query_chain(self.llm, self.db)
+        return (
+            RunnablePassthrough.assign(query=lambda x: self._extract_sql_query(write_query.invoke(x)))
+            .assign(result=lambda x: execute_query.run(x["query"]))
+            | answer_prompt
+            | self.llm
+            | StrOutputParser()
+        )
 
+    def _extract_sql_query(self, response: str) -> Optional[str]:
+        """
+        Extract SQL query from the response string.
 
-def create_chain():
-    db = SQLDatabase.from_uri(db_url)
-    openai_api_key = os.environ.get("OPENAI_API_KEY")
-    if not openai_api_key:
-        raise ValueError("OPENAI_API_KEY environment variable is not set")
-    llm = ChatOpenAI(
-        model="gpt-4o-mini",
-        openai_api_key=openai_api_key,
-        openai_api_base='https://openrouter.ai/api/v1',
-        verbose=True
-    )
-    answer_prompt = PromptTemplate.from_template(ANSWER_PROMPT)
-    execute_query = QuerySQLDataBaseTool(db=db)
-    write_query = create_sql_query_chain(llm, db)
-    chain = (
-        RunnablePassthrough.assign(query=lambda x: extract_sql_query(write_query.invoke(x)))
-        .assign(result=lambda x: execute_query.run(x["query"]))
-        | answer_prompt
-        | llm
-        | StrOutputParser()
-    )
-    return chain, db
+        Args:
+        response (str): The response string containing the SQL query.
 
+        Returns:
+        Optional[str]: The extracted SQL query, or None if no query is found.
+        """
+        patterns: list[tuple[str, int]] = [
+            (r'```sql\s*\n?SQLQuery:\s*(.*?)\n?```', re.DOTALL | re.IGNORECASE),
+            (r'```sql\n(.*?)\n```', re.DOTALL),
+            (r'SQLQuery:\s*(.*)', re.DOTALL)
+        ]
 
-def query_chain(chain, db: SQLDatabase, query: str):
-    try:
-        response = chain.invoke({"question": query})
-        return response
-    except Exception as e:
-        logger.error(f"An error occurred: {str(e)}")
-        return "Sorry, I couldn't find the answer to your question. Rephrase your question and try again, please."
+        for pattern, flags in patterns:
+            match = re.search(pattern, response, flags)
+            if match:
+                query = match.group(1).strip()
+                self.raw_sql = query
+                return query
+
+        logging.error(f"No SQL query found in the response: {response}")
+        return None
+
+    def query(self, question: str) -> tuple[str, str]:
+        """
+        Executes a query on the database and returns the result and the raw SQL query.
+        """
+        try:
+            response: str = self.chain.invoke({"question": question})
+            return response, self.raw_sql
+        except Exception as e:
+            logging.error(f"An error occurred: {str(e)}")
+            error_message = "Sorry, I couldn't find the answer. Rephrase your question and try again, please."
+            return error_message, ""
