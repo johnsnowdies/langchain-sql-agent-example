@@ -7,7 +7,7 @@ from app.api import app as api_app
 
 
 # Setup logging
-logging_level = os.environ.get('LOGGING_LEVEL', 'INFO')
+logging_level = os.environ.get('LOGGING_LEVEL', 'ERROR')
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=getattr(logging, logging_level.upper())

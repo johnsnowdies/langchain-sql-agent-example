@@ -10,11 +10,11 @@ services:
       - POSTGRES_PASSWORD=${DB_PASS}
       - POSTGRES_DB=${DB_NAME}
     networks:
-      agvend:
+      agent-network:
 
   alembic-upgrade:
     command: alembic upgrade head
-    image: 'eslider/agvend-backend:dev'
+    image: 'eslider/agent:dev'
     depends_on:
       db:
         condition: service_started
@@ -23,24 +23,11 @@ services:
     volumes:
       - .:/app
     networks:
-      agvend:
+      agent-network:
 
-  alembic-generate-initial:
-    command: sh -c 'alembic revision --autogenerate -m "${MIGRATION_NAME:-Initial migration}"'
-    image: 'eslider/agvend-backend:dev'
-    volumes:
-      - .:/app
-    networks:
-      agvend:
-    depends_on:
-      db:
-        condition: service_started
-    env_file:
-      - $ENV
-
-  load-fixtures:
+  apply-fixtures:
     command: python -m fixtures.initial_data
-    image: 'eslider/agvend-backend:dev'
+    image: 'eslider/agent:dev'
     depends_on:
       db:
         condition: service_started
@@ -49,33 +36,20 @@ services:
     volumes:
       - .:/app
     networks:
-      agvend:
+      agent-network:
 
   compile-requirements:
     command: make compile-requirements
-    image: 'eslider/agvend-backend:dev'
+    image: 'eslider/agent:dev'
     volumes:
       - .:/app
     networks:
-      agvend:
-
-  test:
-    command: python -m app.test
-    image: 'eslider/agvend-backend:dev'
-    env_file:
-      - $ENV
-    volumes:
-      - .:/app
-    depends_on:
-      db:
-        condition: service_started
-    networks:
-      agvend:
+      agent-network:
 
   app:
     build: .
     command: gunicorn app.main:app -c gunicorn_config.py --reload
-    image: 'eslider/agvend-backend:dev'
+    image: 'eslider/agent:dev'
     ports:
       - "8080:8080"
     env_file:
@@ -86,13 +60,9 @@ services:
     volumes:
       - .:/app
     networks:
-      agvend:
+      agent-network:
 
-
-
-volumes:
-  redis_data:
 
 networks:
-  agvend:
-    name: agvend
+  agent-network:
+    name: agent-network
