@@ -17,7 +17,7 @@ from langchain_core.runnables import RunnableSerializable
 from app.utils import load_json_file
 
 
-class SQLAgent:
+class ChainSQLAgent:
 
     def __init__(
         self,
