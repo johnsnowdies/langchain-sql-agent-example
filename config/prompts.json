@@ -1,3 +1,4 @@
 {
-    "ANSWER_PROMPT": "Given the following user question, corresponding SQL query, and SQL result,\nanswer the user question. In Answer dont mention SQL Query and SQL Result, data source is \"the system\"\nQuestion: {question}\nSQL Query: {query}\nSQL Result: {result}\nAnswer: "
+    "ANSWER_PROMPT": "Given the following user question, corresponding SQL query, and SQL result,\nanswer the user question. In Answer dont mention SQL Query and SQL Result, data source is \"the system\"\nQuestion: {question}\nSQL Query: {query}\nSQL Result: {result}\nAnswer: ",
+    "TOPIC_FILTER_PROMPT": "You are an assistant for a sales system that handles information about users, products, and orders. Your task is to determine if the following question is relevant to this sales system. Answer with only 'yes' if the question is about users, products, or orders in the context of a sales system. Otherwise, answer with 'no'.\n\nQuestion: {question}\n\nIs this question relevant to the sales system (yes/no)?"
 }
